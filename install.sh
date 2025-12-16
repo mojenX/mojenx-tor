@@ -3,7 +3,7 @@ set -euo pipefail
 
 # ================= CONFIG =================
 PROJECT_NAME="mojenX Tor Manager"
-BIN_NAME="mojenx-tor"
+BIN_NAME="mojen-tor"
 REPO_URL="https://github.com/mojenX/mojenx-tor.git"
 
 INSTALL_DIR="$HOME/.local/share/mojenx-tor"
@@ -16,7 +16,7 @@ RED="\033[1;31m"
 CYAN="\033[1;36m"
 RESET="\033[0m"
 
-log()  { echo -e "${CYAN}[+]${RESET} $1"; }
+log()  { echo -e "${CYAN}[*]${RESET} $1"; }
 ok()   { echo -e "${GREEN}[✔]${RESET} $1"; }
 warn() { echo -e "${YELLOW}[!]${RESET} $1"; }
 fail() { echo -e "${RED}[✖]${RESET} $1"; exit 1; }
@@ -26,16 +26,27 @@ if ! grep -qiE "debian|ubuntu" /etc/os-release; then
     fail "Unsupported OS. Debian / Ubuntu only."
 fi
 
-# ================= REQUIREMENTS =================
-for cmd in git python3 pip3 curl; do
-    command -v "$cmd" >/dev/null 2>&1 || fail "Missing dependency: $cmd"
-done
+# ================= REQUIRE FUNCTION =================
+require() {
+    if ! command -v "$1" >/dev/null 2>&1; then
+        warn "Missing dependency: $1 — installing"
+        sudo apt-get update -y
+        sudo apt-get install -y "$2" || fail "Failed to install $1"
+    fi
+}
 
 # ================= SYSTEM DEPS =================
-log "Installing system dependencies (tor, python)"
-sudo apt update -y || fail "apt update failed"
-sudo apt install -y tor tor-geoipdb python3 python3-pip || fail "apt install failed"
-ok "System dependencies installed"
+log "Checking system dependencies"
+
+require curl curl
+require git git
+require python3 python3
+require pip3 python3-pip
+
+log "Installing Tor"
+sudo apt-get install -y tor tor-geoipdb || fail "Tor install failed"
+
+ok "System dependencies ready"
 
 # ================= PYTHON DEPS =================
 log "Installing Python dependencies"
@@ -69,4 +80,4 @@ fi
 # ================= DONE =================
 ok "$PROJECT_NAME installed successfully"
 echo
-echo -e "${GREEN}Run:${RESET} ${CYAN}mojenx${RESET}"
+echo -e "${GREEN}Run:${RESET} ${CYAN}$BIN_NAME${RESET}"
