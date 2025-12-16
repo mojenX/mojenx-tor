@@ -67,8 +67,8 @@ fi
 
 # ================= COMMAND SETUP =================
 mkdir -p "$BIN_DIR"
-chmod +x "$INSTALL_DIR/goz.py"
-ln -sf "$INSTALL_DIR/goz.py" "$BIN_DIR/$BIN_NAME"
+chmod +x "$INSTALL_DIR/tor.py"
+ln -sf "$INSTALL_DIR/tor.py" "$BIN_DIR/$BIN_NAME"
 
 # ================= PATH SETUP =================
 if ! echo "$PATH" | grep -q "$BIN_DIR"; then
