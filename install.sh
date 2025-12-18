@@ -1,7 +1,6 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-# ================= CONFIG =================
 PROJECT_NAME="mojenX Tor Manager"
 BIN_NAME="mojen-tor"
 REPO_URL="https://github.com/mojenX/mojenx-tor.git"
@@ -9,7 +8,6 @@ REPO_URL="https://github.com/mojenX/mojenx-tor.git"
 INSTALL_DIR="$HOME/.local/share/mojenx-tor"
 BIN_DIR="$HOME/.local/bin"
 
-# ================= COLORS =================
 GREEN="\033[1;32m"
 YELLOW="\033[1;33m"
 RED="\033[1;31m"
@@ -21,63 +19,32 @@ ok()   { echo -e "${GREEN}[✔]${RESET} $1"; }
 warn() { echo -e "${YELLOW}[!]${RESET} $1"; }
 fail() { echo -e "${RED}[✖]${RESET} $1"; exit 1; }
 
-# ================= OS CHECK =================
-if ! grep -qiE "debian|ubuntu" /etc/os-release; then
-    fail "Unsupported OS. Debian / Ubuntu only."
-fi
+grep -qiE "debian|ubuntu" /etc/os-release || fail "Debian/Ubuntu only"
 
-# ================= REQUIRE FUNCTION =================
 require() {
-    if ! command -v "$1" >/dev/null 2>&1; then
-        warn "Missing dependency: $1 — installing"
-        sudo apt-get update -y
-        sudo apt-get install -y "$2" || fail "Failed to install $1"
-    fi
+    command -v "$1" >/dev/null 2>&1 && return
+    warn "Installing missing dependency: $1"
+    sudo apt-get update -y
+    sudo apt-get install -y "$2"
 }
-
-# ================= SYSTEM DEPS =================
-log "Checking system dependencies"
 
 require curl curl
 require git git
 require python3 python3
 require pip3 python3-pip
 
-log "Installing Tor"
-sudo apt-get install -y tor tor-geoipdb || fail "Tor install failed"
+sudo apt-get install -y tor tor-geoipdb
 
-ok "System dependencies ready"
-
-# ================= PYTHON DEPS =================
-log "Installing Python dependencies"
-pip3 install --user --upgrade requests[socks] || fail "pip install failed"
-ok "Python dependencies installed"
-
-# ================= PROJECT INSTALL =================
-log "Installing $PROJECT_NAME"
+pip3 install --user --upgrade requests[socks]
 
 mkdir -p "$INSTALL_DIR"
+git clone "$REPO_URL" "$INSTALL_DIR" 2>/dev/null || git -C "$INSTALL_DIR" pull
 
-if [ -d "$INSTALL_DIR/.git" ]; then
-    warn "Existing installation found — updating"
-    git -C "$INSTALL_DIR" pull || fail "git pull failed"
-else
-    git clone "$REPO_URL" "$INSTALL_DIR" || fail "git clone failed"
-fi
-
-# ================= COMMAND SETUP =================
 mkdir -p "$BIN_DIR"
 chmod +x "$INSTALL_DIR/tor.py"
 ln -sf "$INSTALL_DIR/tor.py" "$BIN_DIR/$BIN_NAME"
 
-# ================= PATH SETUP =================
-if ! echo "$PATH" | grep -q "$BIN_DIR"; then
-    warn "$BIN_DIR not in PATH"
-    echo "export PATH=\"\$PATH:$BIN_DIR\"" >> "$HOME/.bashrc"
-    ok "PATH updated (restart shell or run: source ~/.bashrc)"
-fi
+echo 'export PATH="$PATH:$HOME/.local/bin"' >> ~/.bashrc
 
-# ================= DONE =================
-ok "$PROJECT_NAME installed successfully"
-echo
-echo -e "${GREEN}Run:${RESET} ${CYAN}$BIN_NAME${RESET}"
+ok "Installed successfully"
+echo -e "${GREEN}Run:${RESET} ${CYAN}mojen-tor${RESET}"
