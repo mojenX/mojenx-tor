@@ -1,35 +1,56 @@
-# mojenX Tor Manager
+#!/usr/bin/env bash
+set -e
 
-Minimal Tor control CLI for Linux power users.
+# ================= CONFIG =================
+APP_NAME="mojenX Tor Manager"
+CMD_NAME="mojen-tor"
+REPO_URL="https://github.com/mojenX/mojenx-tor.git"
 
-A clean, open-source Tor manager designed for VPS and Debian-based systems.
+INSTALL_DIR="/opt/mojenx-tor"
+BIN_PATH="/usr/local/bin/${CMD_NAME}"
 
----
+# ================= COLORS =================
+G="\033[1;32m"; R="\033[1;31m"; Y="\033[1;33m"; C="\033[1;36m"; N="\033[0m"
 
-## Features
+ok()   { echo -e "${G}[✔]${N} $1"; }
+info() { echo -e "${C}[*]${N} $1"; }
+warn() { echo -e "${Y}[!]${N} $1"; }
+fail() { echo -e "${R}[✖]${N} $1"; exit 1; }
 
-- Install / Update / Uninstall Tor
-- Start / Stop / Restart / Reload Tor service
-- View current Tor IP
-- Rotate IP (manual or scheduled)
-- Manage SOCKS port
-- Manage Exit Nodes
-- Interactive CLI menu
-- No telemetry, no logging
+# ================= ROOT CHECK =================
+[ "$EUID" -ne 0 ] && fail "Run as root (sudo bash install.sh)"
 
----
+# ================= OS CHECK =================
+grep -qiE "debian|ubuntu" /etc/os-release || fail "Debian/Ubuntu only"
 
-## Requirements
+# ================= SYSTEM DEPS =================
+info "Installing system dependencies"
+apt update -y
+apt install -y git curl python3 python3-pip tor tor-geoipdb
+ok "System dependencies ready"
 
-- Debian / Ubuntu
-- Python 3.9+
-- Root access (required for Tor service control)
+# ================= PYTHON DEPS =================
+info "Installing Python dependencies"
+pip3 install --upgrade requests[socks]
+ok "Python dependencies installed"
 
----
+# ================= INSTALL APP =================
+info "Installing ${APP_NAME}"
 
-## Installation
+if [ -d "$INSTALL_DIR/.git" ]; then
+    warn "Existing installation found – updating"
+    git -C "$INSTALL_DIR" pull
+else
+    git clone "$REPO_URL" "$INSTALL_DIR"
+fi
 
-One-line installer:
+chmod +x "$INSTALL_DIR/tor.py"
 
-```bash
-curl -fsSL https://raw.githubusercontent.com/mojenX/mojenx-tor/main/install.sh | sudo bash
+# ================= COMMAND LINK =================
+ln -sf "$INSTALL_DIR/tor.py" "$BIN_PATH"
+chmod +x "$BIN_PATH"
+
+# ================= DONE =================
+echo
+ok "${APP_NAME} installed successfully"
+echo -e "${G}Run:${N} ${C}${CMD_NAME}${N}"
