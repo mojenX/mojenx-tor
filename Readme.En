@@ -1,93 +1,35 @@
-# mojenX — Tor Manager CLI
+# mojenX Tor Manager
 
-**Minimal Tor Control for Power Users**
-Control Tor. Cleanly.
+Minimal Tor control CLI for Linux power users.
 
----
-
-## Overview
-
-**mojenX** is a lightweight, privacy‑first Tor management CLI for Debian‑based Linux systems.
-It focuses on clarity, safety, and a clean terminal experience — nothing more, nothing less.
+A clean, open-source Tor manager designed for VPS and Debian-based systems.
 
 ---
 
 ## Features
 
-* Install, update, and control Tor
-* Manual and scheduled IP rotation
-* Exit location selection
-* SOCKS port management
-* Polished, minimal CLI interface
-
----
-
-## Installation
-
-```bash
-curl -fsSL https://raw.githubusercontent.com/mojenX/mojenx-tor/main/install.sh | bash
-```
-
-After installation:
-
-```bash
-mojen-tor
-```
-
----
-
-## Usage
-
-Launch the interactive menu:
-
-```bash
-mojen-tor
-```
-
-All actions are performed locally through a guided terminal interface.
+- Install / Update / Uninstall Tor
+- Start / Stop / Restart / Reload Tor service
+- View current Tor IP
+- Rotate IP (manual or scheduled)
+- Manage SOCKS port
+- Manage Exit Nodes
+- Interactive CLI menu
+- No telemetry, no logging
 
 ---
 
 ## Requirements
 
-* Debian‑based Linux (Debian / Ubuntu)
-* Python 3.9+
-* Root access **only** for Tor service control
+- Debian / Ubuntu
+- Python 3.9+
+- Root access (required for Tor service control)
 
 ---
 
-## Security & Privacy
+## Installation
 
-* No logging
-* No telemetry
-* No remote services
-* Local‑only execution
+One-line installer:
 
----
-
-## Disclaimer
-
-This project is intended for **educational and privacy‑focused usage only**.
-Users are responsible for complying with local laws and regulations.
-
----
-
-## Branding
-
-**Name:** mojenX
-**Taglines:**
-
-* *Minimal Tor Control for Power Users*
-* *Control Tor. Cleanly.*
-
----
-
----
-
-## License
-
-MIT License
-
----
-
-Made for users who want Tor control without noise.
+```bash
+curl -fsSL https://raw.githubusercontent.com/mojenX/mojenx-tor/main/install.sh | sudo bash
