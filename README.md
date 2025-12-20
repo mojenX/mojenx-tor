@@ -76,7 +76,7 @@ Pull requests and improvements are welcome.
 
 📬 Contact
 
-Telegram: @mojenX
+Telegram: @mojenXsec
 
 
 ---
@@ -86,3 +86,4 @@ Telegram: @mojenX
 If this project is useful to you, consider giving it a star.
 
 ---
+
