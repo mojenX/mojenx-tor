@@ -1,4 +1,4 @@
-Moein, [12/27/2025 11:30 AM]
+
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 
@@ -312,3 +312,4 @@ def menu():
 
 if name == "main":
     menu()
+
