@@ -128,8 +128,15 @@ WRAPPER="$INSTALL_DIR/${CMD_NAME}"
 cat > "$WRAPPER" <<'EOF'
 #!/usr/bin/env bash
 set -e
-APP_DIR="/opt/mojenx-tor"
-exec "$APP_DIR/.venv/bin/python" "$APP_DIR/tor.py" "$@"
+SELF="$(readlink -f "$0")"
+APP_DIR="$(dirname "$SELF")"
+VENV_PY="$APP_DIR/.venv/bin/python"
+
+if [ -x "$VENV_PY" ]; then
+    exec "$VENV_PY" "$APP_DIR/tor.py" "$@"
+else
+    exec python3 "$APP_DIR/tor.py" "$@"
+fi
 EOF
 
 chmod +x "$WRAPPER"
