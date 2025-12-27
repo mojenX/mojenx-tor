@@ -128,8 +128,8 @@ WRAPPER="$INSTALL_DIR/${CMD_NAME}"
 cat > "$WRAPPER" <<'EOF'
 #!/usr/bin/env bash
 set -e
-DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-exec "$DIR/.venv/bin/python" "$DIR/tor.py" "$@"
+APP_DIR="/opt/mojenx-tor"
+exec "$APP_DIR/.venv/bin/python" "$APP_DIR/tor.py" "$@"
 EOF
 
 chmod +x "$WRAPPER"
