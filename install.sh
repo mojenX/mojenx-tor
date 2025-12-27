@@ -7,7 +7,7 @@ CMD_NAME="mojen-tor"
 REPO_URL="https://github.com/mojenX/mojenx-tor.git"
 
 INSTALL_DIR="/opt/mojenx-tor"
-BIN_PATH="/usr/local/bin/${CMD_NAME}"
+BIN_PATH="/usr/bin/${CMD_NAME}"
 
 # ================= COLORS =================
 G="\033[1;32m"; R="\033[1;31m"; Y="\033[1;33m"; C="\033[1;36m"; N="\033[0m"
@@ -32,22 +32,47 @@ ok "System dependencies ready"
 info "Preparing ${APP_NAME}"
 if [ -d "$INSTALL_DIR/.git" ]; then
     warn "Existing installation found at ${INSTALL_DIR}"
-    echo -e "${C}Choose action:${N} [U]pdate / [R]einstall / [C]ancel"
-    read -r -p "Action (U/r/c): " _choice
-    _choice="$(echo "${_choice:-U}" | tr '[:upper:]' '[:lower:]')"
+    echo -e "${C}System already configured.${N} Choose:"
+    echo -e "  [1] Open Manager"
+    echo -e "  [2] Update"
+    echo -e "  [3] Uninstall"
+    echo -e "  [4] Cancel"
+    read -r -p "Select (1/2/3/4): " _choice
+    _choice="$(echo "${_choice:-1}" | tr -cd '[:digit:]')"
 
     case "$_choice" in
-        u|"")
+        1|"")
+            info "Launching ${APP_NAME}..."
+            if [ -x "$BIN_PATH" ]; then
+                "$BIN_PATH"
+            else
+                # Fallback direct run if wrapper missing
+                if [ -x "$INSTALL_DIR/.venv/bin/python" ]; then
+                    exec "$INSTALL_DIR/.venv/bin/python" -u "$INSTALL_DIR/tor.py"
+                else
+                    exec python3 -u "$INSTALL_DIR/tor.py"
+                fi
+            fi
+            exit 0
+            ;;
+        2)
             info "Updating existing installation"
             git -C "$INSTALL_DIR" pull --ff-only || fail "Git update failed"
             ;;
-        r)
-            info "Reinstalling fresh copy"
+        3)
+            info "Uninstalling ${APP_NAME}"
+            if command -v systemctl >/dev/null 2>&1; then
+                systemctl stop tor >/dev/null 2>&1 || true
+            else
+                pgrep -x tor >/dev/null 2>&1 && pkill -x tor || true
+            fi
             rm -rf "$INSTALL_DIR"
-            git clone "$REPO_URL" "$INSTALL_DIR" || fail "Clone failed"
+            rm -f "$BIN_PATH"
+            ok "Uninstalled. Tor service/process handled best-effort."
+            exit 0
             ;;
-        c)
-            warn "Installation cancelled by user"
+        4)
+            warn "Cancelled by user"
             exit 0
             ;;
         *)
@@ -104,10 +129,18 @@ else
     warn "Tor configuration file not found at ${TORRC}"
 fi
 
-info "Restarting Tor service"
-systemctl enable tor >/dev/null 2>&1 || true
-systemctl restart tor || fail "Failed to restart Tor"
-systemctl is-active --quiet tor && ok "Tor service is active" || fail "Tor service not active"
+info "Managing Tor service (systemd optional)"
+if command -v systemctl >/dev/null 2>&1; then
+    systemctl enable tor >/dev/null 2>&1 || true
+    systemctl restart tor || warn "Failed to restart Tor via systemctl (the Manager can handle starting/stopping)"
+    if systemctl is-active --quiet tor; then
+        ok "Tor service is active"
+    else
+        warn "Tor service not active (interactive Manager can manage it)"
+    fi
+else
+    warn "systemctl not available. Skipping service management. The interactive Manager can start/stop Tor directly."
+fi
 
 # ================= PERMISSIONS & GROUP =================
 TARGET_USER="${SUDO_USER:-$(logname 2>/dev/null || echo "$USER")}"
@@ -133,6 +166,8 @@ set -euo pipefail
 APP_DIR="/opt/mojenx-tor"
 SCRIPT="$APP_DIR/tor.py"
 VENV_PY="$APP_DIR/.venv/bin/python"
+VENV_PIP="$APP_DIR/.venv/bin/pip"
+TOR_COOKIE="/run/tor/control.authcookie"
 
 # Diagnostics to avoid silent failures
 if [ ! -f "$SCRIPT" ]; then
@@ -140,7 +175,21 @@ if [ ! -f "$SCRIPT" ]; then
     exit 1
 fi
 
+# Prefer venv Python, else fall back to system python
+runner=""
 if [ -x "$VENV_PY" ]; then
+    runner="$VENV_PY"
+else
+    if command -v python3 >/dev/null 2>&1; then
+        runner="python3"
+    else
+        echo "[ERROR] python3 not found in PATH"
+        exit 1
+    fi
+fi
+
+# Ensure required Python packages
+if [ "$runner" = "$VENV_PY" ]; then
     exec "$VENV_PY" -u "$SCRIPT" "$@"
 else
     command -v python3 >/dev/null 2>&1 || { echo "[ERROR] python3 not found in PATH"; exit 1; }
