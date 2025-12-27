@@ -11,10 +11,10 @@ BIN_PATH="/usr/local/bin/${CMD_NAME}"
 
 # ================= COLORS =================
 G="\033[1;32m"; R="\033[1;31m"; Y="\033[1;33m"; C="\033[1;36m"; N="\033[0m"
-ok()   { echo -e "${G}[✔]${N} $1"; }
+ok()   { echo -e "${G}[✔️]${N} $1"; }
 info() { echo -e "${C}[*]${N} $1"; }
 warn() { echo -e "${Y}[!]${N} $1"; }
-fail() { echo -e "${R}[✖]${N} $1"; exit 1; }
+fail() { echo -e "${R}[✖️]${N} $1"; exit 1; }
 
 # ================= ROOT CHECK =================
 [ "$EUID" -ne 0 ] && fail "Run as root (sudo bash install.sh)"
@@ -25,13 +25,8 @@ grep -qiE "debian|ubuntu" /etc/os-release || fail "Debian/Ubuntu only"
 # ================= SYSTEM DEPS =================
 info "Installing system dependencies"
 apt update -y
-apt install -y git curl python3 python3-pip tor tor-geoipdb
+apt install -y git curl python3 tor tor-geoipdb python3-requests python3-socks
 ok "System dependencies ready"
-
-# ================= PYTHON DEPS =================
-info "Installing Python dependencies"
-pip3 install --upgrade requests[socks]
-ok "Python dependencies installed"
 
 # ================= INSTALL APP =================
 info "Installing ${APP_NAME}"
@@ -43,7 +38,7 @@ else
     git clone "$REPO_URL" "$INSTALL_DIR"
 fi
 
-# ================= CRLF FIX (IMPORTANT) =================
+# ================= CRLF FIX =================
 info "Normalizing line endings (CRLF → LF)"
 sed -i 's/\r$//' "$INSTALL_DIR/tor.py"
 
