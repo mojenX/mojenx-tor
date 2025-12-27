@@ -1,14 +1,15 @@
+Moein, [12/27/2025 11:30 AM]
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 
 """
-mojenX Tor Manager
-Debian / Ubuntu VPS
-Author: mojenX
+mojenX Tor Manager - Ultra (Single File)
+Author : mojenX
 License: MIT
+OS     : Debian / Ubuntu
 """
 
-from __future__ import annotations
+from future import annotations
 
 import os
 import sys
@@ -21,110 +22,93 @@ from pathlib import Path
 from dataclasses import dataclass
 from typing import List, Tuple
 
-try:
-    import requests
-except Exception:
-    requests = None
+# ===================== CONSTANTS =====================
 
-# ========================= CONSTANTS =========================
+APP_NAME = "mojenX Tor Manager"
+VERSION = "1.0.0-ultra"
 
 TORRC = Path("/etc/tor/torrc")
 BACKUP_DIR = Path("/var/backups/mojenx")
+LOG_FILE = Path("/var/log/mojenx/tor.log")
 DEFAULT_SOCKS = 9050
 
-VALID_COUNTRY_CODES = {
-    "tr": "Turkey",
-    "de": "Germany",
-    "us": "United States",
-    "fr": "France",
-    "uk": "United Kingdom",
-    "at": "Austria",
-    "be": "Belgium",
-    "ro": "Romania",
-    "ca": "Canada",
-    "sg": "Singapore",
-    "jp": "Japan",
-    "ie": "Ireland",
-    "fi": "Finland",
-    "es": "Spain",
-    "pl": "Poland",
+VALID_COUNTRIES = {
+    "tr","de","us","fr","uk","at","be","ro","ca",
+    "sg","jp","ie","fi","es","pl"
 }
 
-# ========================= COLORS =========================
+# ===================== COLORS =====================
 
 class C:
     B = "\033[1m"
     G = "\033[1;32m"
-    Y = "\033[1;33m"
     R = "\033[1;31m"
+    Y = "\033[1;33m"
     C = "\033[1;36m"
     D = "\033[2m"
     N = "\033[0m"
 
-# ========================= UI =========================
+# ===================== LOGGING =====================
+
+def log(msg: str):
+    LOG_FILE.parent.mkdir(parents=True, exist_ok=True)
+    with open(LOG_FILE, "a") as f:
+        f.write(f"[{time.strftime('%F %T')}] {msg}\n")
+
+# ===================== UI =====================
+
+def clear():
+    os.system("clear")
 
 def hr():
-    print(f"{C.D}{'-' * 46}{C.N}")
-
-def ok(msg):
-    print(f"{C.G}✔ {msg}{C.N}")
-
-def warn(msg):
-    print(f"{C.Y}⚠ {msg}{C.N}")
-
-def err(msg):
-    print(f"{C.R}✖ {msg}{C.N}")
-
-def prompt(msg):
-    return input(f"{C.C}➜ {msg}{C.N} ").strip()
-
-def pause():
-    input(f"{C.D}Press Enter to continue...{C.N}")
+    print(f"{C.D}{'-'*52}{C.N}")
 
 def banner():
-    print(
-        C.C + C.B + r"""
-                      _           _  __
-   ____ ___  ____    (_)__  ____ | |/ /
-  / __ `__ \/ __ \  / / _ \/ __ \|   /
- / / / / / / /_/ / / /  __/ / / /   |
-/_/ /_/ /_/\____/_/ /\___/_/ /_/_/|_|
-               /___/
+    print(C.C + C.B + r"""
+               _       _  __
+|  \/  | _  _ | |_ ___| |/ /
+| |\/| |/ _ \/ _ \| __/ _ \ ' /
+| |  | |  / (_) | ||  / . \
+|_|  |_|\_|\_/ \\_|_|\_\
 
-            mojenX · tor manager
-""" + C.N
-    )
+       mojenX • tor manager
+""" + C.N)
 
-# ========================= UTILS =========================
+def ok(msg): print(f"{C.G}✔ {msg}{C.N}")
+def warn(msg): print(f"{C.Y}⚠ {msg}{C.N}")
+def err(msg): print(f"{C.R}✖ {msg}{C.N}")
+def pause(): input(f"{C.D}Press Enter to continue...{C.N}")
+def ask(msg): return input(f"{C.C}➜ {msg}{C.N} ").strip()
+
+# ===================== SYSTEM =====================
 
 def run(cmd, **kw):
+    log("RUN " + " ".join(cmd))
     return subprocess.run(cmd, text=True, **kw)
-
-def which(cmd):
-    return shutil.which(cmd)
 
 def is_root():
     return os.geteuid() == 0
 
 def require_root():
     if not is_root():
-        warn("Run as root (sudo required)")
+        err("Run as root (sudo)")
         return False
     return True
 
-# ========================= SERVICE =========================
+def which(x):
+    return shutil.which(x)
 
-def tor_service_name():
+# ===================== SERVICE =====================
+
+def service_name():
     if which("systemctl"):
-        r = run(
-            ["systemctl", "list-units", "--type=service", "--no-pager"],
-            capture_output=True,
-        )
+        r = run(["systemctl","list-units","--type=service","--no-pager"],
+                capture_output=True)
         if "tor@default.service" in r.stdout:
             return "tor@default"
     return "tor"
 
-SERVICE = tor_service_name()
+SERVICE = service_name()
 
 def svc(action):
     if which("systemctl"):
@@ -132,63 +116,38 @@ def svc(action):
     else:
         run(["service", SERVICE, action], check=False)
 
-def start():
-    require_root() and svc("start")
-
-def stop():
-    require_root() and svc("stop")
-
-def restart():
-    require_root() and svc("restart")
-
-def reload():
-    require_root() and svc("reload")
+def start(): require_root() and svc("start")
+def stop(): require_root() and svc("stop")
+def restart(): require_root() and svc("restart")
+def reload(): require_root() and svc("reload")
 
 def status():
-    r = run(
-        ["systemctl", "status", SERVICE]
-        if which("systemctl")
-        else ["service", SERVICE, "status"],
-        capture_output=True,
-    )
+    r = run(["systemctl","status",SERVICE] if which("systemctl")
+            else ["service",SERVICE,"status"], capture_output=True)
     print(r.stdout)
 
-# ========================= TORRC =========================
+# ===================== TORRC =====================
 
-def backup(path: Path):
-    if not path.exists():
-        return
-    BACKUP_DIR.mkdir(parents=True, exist_ok=True)
-    ts = time.strftime("%Y%m%d-%H%M%S")
-    shutil.copy2(path, BACKUP_DIR / f"{path.name}.{ts}.bak")
+def backup():
+    if TORRC.exists():
+        BACKUP_DIR.mkdir(parents=True, exist_ok=True)
+        ts = time.strftime("%Y%m%d-%H%M%S")
+        shutil.copy2(TORRC, BACKUP_DIR / f"torrc.{ts}.bak")
 
-def atomic_write(path: Path, lines: List[str]):
-    fd, tmp = tempfile.mkstemp(dir=str(path.parent))
-    with os.fdopen(fd, "w") as f:
-        f.write("\n".join(lines) + "\n")
-    if path.exists():
-        backup(path)
-        os.chmod(tmp, path.stat().st_mode)
-    os.replace(tmp, path)
-
-def read_torrc() -> Tuple[int, str, List[str]]:
+def read_torrc() -> Tuple[int,str,List[str]]:
     socks = DEFAULT_SOCKS
     exitnodes = ""
-    try:
-        lines = TORRC.read_text().splitlines()
-    except FileNotFoundError:
+    if not TORRC.exists():
         return socks, exitnodes, []
 
+    lines = TORRC.read_text().splitlines()
     for l in lines:
         t = l.strip()
         if t.startswith("SocksPort"):
-            try:
-                socks = int(t.split()[1])
-            except Exception:
-                pass
+            try: socks = int(t.split()[1])
+            except: pass
         elif t.startswith("ExitNodes"):
-            exitnodes = t.split(" ", 1)[1]
-
+            exitnodes = t.split(" ",1)[1]
     return socks, exitnodes, lines
 
 def write_torrc(port=None, exitnodes=None):
@@ -196,94 +155,81 @@ def write_torrc(port=None, exitnodes=None):
     out = []
     sp = en = False
 
-    for l in lines:
+for l in lines:
         t = l.strip()
-        if t.startswith("SocksPort") and port is not None:
+        if t.startswith("SocksPort") and port:
             out.append(f"SocksPort {port}")
             sp = True
-        elif t.startswith("ExitNodes") and exitnodes is not None:
+        elif t.startswith("ExitNodes") and exitnodes:
             out.append(f"ExitNodes {exitnodes}")
             en = True
         else:
             out.append(l)
 
-    if port is not None and not sp:
+    if port and not sp:
         out.append(f"SocksPort {port}")
-    if exitnodes is not None and not en:
+    if exitnodes and not en:
         out.append(f"ExitNodes {exitnodes}")
 
-    atomic_write(TORRC, out)
+    backup()
+    TORRC.write_text("\n".join(out) + "\n")
 
-# ========================= TOR IP =========================
-
-def ensure_tor():
-    if which("systemctl"):
-        r = run(["systemctl", "is-active", SERVICE], capture_output=True)
-        if r.stdout.strip() != "active":
-            start()
-            time.sleep(3)
+# ===================== TOR IP =====================
 
 def tor_ip():
-    if requests is None:
-        err("requests[socks] not installed")
+    try:
+        import requests
+    except ImportError:
+        err("python3-requests not installed")
         return
 
-    ensure_tor()
-    socks, _, _ = read_torrc()
-
+    socks,_,_ = read_torrc()
     proxies = {
         "http": f"socks5h://127.0.0.1:{socks}",
         "https": f"socks5h://127.0.0.1:{socks}",
     }
 
     try:
-        r = requests.get(
-            "http://checkip.amazonaws.com/",
-            proxies=proxies,
-            timeout=15,
-        )
+        r = requests.get("http://checkip.amazonaws.com/",
+                         proxies=proxies, timeout=15)
         ok(f"Tor IP: {r.text.strip()}")
     except Exception as e:
         err(str(e))
 
-# ========================= CRON =========================
+# ===================== CRON =====================
 
 def cron(minutes: int):
-    if not require_root() or minutes <= 0:
-        return
-
-    job = f"*/{minutes} * * * * /usr/bin/systemctl restart {SERVICE}"
-    r = run(["crontab", "-l"], capture_output=True, check=False)
-
+    if not require_root(): return
+    job = f"*/{minutes} * * * * systemctl restart {SERVICE}"
+    r = run(["crontab","-l"], capture_output=True, check=False)
     lines = [l for l in r.stdout.splitlines() if SERVICE not in l]
     lines.append(job)
 
     with tempfile.NamedTemporaryFile("w", delete=False) as f:
-        f.write("\n".join(lines) + "\n")
+        f.write("\n".join(lines)+"\n")
 
     run(["crontab", f.name])
     os.unlink(f.name)
     ok("Cronjob installed")
 
-# ========================= INSTALL =========================
+# ===================== INSTALL =====================
 
 def install():
-    if not require_root():
-        return
-    run(["apt", "update"])
-    run(["apt", "install", "-y", "tor", "tor-geoipdb", "python3-pip"])
-    run([sys.executable, "-m", "pip", "install", "requests[socks]"], check=False)
+    if not require_root(): return
+    run(["apt","update"])
+    run(["apt","install","-y",
+         "tor","tor-geoipdb","python3-requests"])
     ok("Tor installed")
 
 def update():
-    require_root() and run(["apt", "install", "--only-upgrade", "-y", "tor"])
+    require_root() and run(["apt","install","--only-upgrade","-y","tor"])
     ok("Tor updated")
 
 def uninstall():
-    require_root() and run(["apt", "remove", "-y", "tor"])
+    require_root() and run(["apt","remove","-y","tor"])
     warn("Tor uninstalled")
 
-# ========================= STATE =========================
+# ===================== STATE =====================
 
 @dataclass
 class State:
@@ -291,92 +237,78 @@ class State:
     socks: int
     exitnodes: str
 
-def build_state():
-    s, e, _ = read_torrc()
+def state():
+    s,e,_ = read_torrc()
     return State(which("tor") is not None, s, e)
 
-# ========================= MENU =========================
+# ===================== MENU =====================
 
 def menu():
     while True:
-        os.system("clear")
-        st = build_state()
+        clear()
+        st = state()
 
         banner()
         hr()
-        print(f" Tor status : {C.G if st.installed else C.R}{'INSTALLED' if st.installed else 'NOT INSTALLED'}{C.N}")
+        print(f" Tor status : {C.G if st.installed else C.R}"
+              f"{'INSTALLED' if st.installed else 'NOT INSTALLED'}{C.N}")
         print(f" SocksPort  : {C.C}{st.socks}{C.N}")
         print(f" ExitNodes  : {C.C}{st.exitnodes or '(none)'}{C.N}")
         hr()
 
-        print(
-            " 1) Install tor\n"
-            " 2) Update tor\n"
-            " 3) Uninstall tor\n"
-            " 4) Get tor IP\n"
-            " 5) Cronjob (rotate IP)\n"
-            " 6) Rotate IP (reload + restart)\n"
-            " 7) Change SocksPort\n"
-            " 8) Change ExitNodes\n"
-            " 9) Start tor\n"
-            "10) Stop tor\n"
-            "11) Restart tor\n"
-            "12) Reload tor\n"
-            "13) Status\n"
-            " 0) Exit"
-        )
+        print("""
+ 1) Install tor
+ 2) Update tor
+ 3) Uninstall tor
+ 4) Get tor IP
+ 5) Cronjob (rotate IP)
+ 6) Rotate IP (reload + restart)
+ 7) Change SocksPort
+ 8) Change ExitNodes
+ 9) Start tor
+10) Stop tor
+11) Restart tor
+12) Reload tor
+13) Status
+ 0) Exit
+""")
 
-        c = prompt("Select option")
+        c = ask("Select option")
 
         if c == "0":
-            print("\nbye 👋")
+            print("bye 👋")
             return
-        elif c == "1":
-            install()
-        elif c == "2":
-            update()
-        elif c == "3":
-            uninstall()
-        elif c == "4":
-            tor_ip()
+        elif c == "1": install()
+        elif c == "2": update()
+        elif c == "3": uninstall()
+        elif c == "4": tor_ip()
         elif c == "5":
-            m = prompt("Rotate every N minutes")
-            if m.isdigit():
-                cron(int(m))
+            m = ask("Rotate every N minutes")
+            if m.isdigit(): cron(int(m))
         elif c == "6":
-            reload()
-            restart()
+            reload(); restart()
+            ok("IP rotated")
         elif c == "7":
-            p = prompt("New SocksPort")
-            if p.isdigit() and int(p) > 0:
+            p = ask("New SocksPort")
+            if p.isdigit():
                 write_torrc(port=int(p))
                 restart()
-                ok("SocksPort updated")
         elif c == "8":
-            print(f"{C.D}Valid codes: {', '.join(VALID_COUNTRY_CODES)}{C.N}")
-            raw = prompt("Country codes")
-            parts = [
-                x for x in raw.replace(",", " ").split()
-                if x in VALID_COUNTRY_CODES
-            ]
+            raw = ask("Country codes (tr,de,...)")
+            parts = [x for x in raw.replace(","," ").split()
+                     if x in VALID_COUNTRIES]
             if parts:
                 write_torrc(exitnodes="".join(f"{{{p}}}" for p in parts))
                 restart()
-                ok("ExitNodes updated")
-        elif c == "9":
-            start()
-        elif c == "10":
-            stop()
-        elif c == "11":
-            restart()
-        elif c == "12":
-            reload()
-        elif c == "13":
-            status()
+        elif c == "9": start()
+        elif c == "10": stop()
+        elif c == "11": restart()
+        elif c == "12": reload()
+        elif c == "13": status()
 
         pause()
 
-# ========================= ENTRY =========================
+# ===================== ENTRY =====================
 
-if __name__ == "__main__":
+if name == "main":
     menu()
