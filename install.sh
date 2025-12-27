@@ -124,25 +124,33 @@ chmod +x "$INSTALL_DIR/tor.py"
 
 # ================= LAUNCHER & LINK =================
 info "Creating launcher"
-WRAPPER="$INSTALL_DIR/${CMD_NAME}"
+# --- begin replacement ---
+WRAPPER="$BIN_PATH"
 cat > "$WRAPPER" <<'EOF'
 #!/usr/bin/env bash
-set -e
-SELF="$(readlink -f "$0")"
-APP_DIR="$(dirname "$SELF")"
+set -euo pipefail
+
+APP_DIR="/opt/mojenx-tor"
+SCRIPT="$APP_DIR/tor.py"
 VENV_PY="$APP_DIR/.venv/bin/python"
 
+# Diagnostics to avoid silent failures
+if [ ! -f "$SCRIPT" ]; then
+    echo "[ERROR] $SCRIPT not found. Verify the repository contents in $APP_DIR."
+    exit 1
+fi
+
 if [ -x "$VENV_PY" ]; then
-    exec "$VENV_PY" "$APP_DIR/tor.py" "$@"
+    exec "$VENV_PY" -u "$SCRIPT" "$@"
 else
-    exec python3 "$APP_DIR/tor.py" "$@"
+    command -v python3 >/dev/null 2>&1 || { echo "[ERROR] python3 not found in PATH"; exit 1; }
+    exec python3 -u "$SCRIPT" "$@"
 fi
 EOF
 
 chmod +x "$WRAPPER"
-ln -sf "$WRAPPER" "$BIN_PATH"
-chmod +x "$BIN_PATH"
 ok "Launcher installed at ${BIN_PATH}"
+# --- end replacement ---
 
 # ================= DONE =================
 echo
